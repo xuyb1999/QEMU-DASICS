@@ -30,6 +30,7 @@
 #include "cpu_cfg.h"
 #include "qapi/qapi-types-common.h"
 #include "cpu-qom.h"
+#include "dasics.h"
 
 #define TCG_GUEST_DEFAULT_MO 0
 
@@ -57,6 +58,7 @@
 #define RVU RV('U')
 #define RVH RV('H')
 #define RVJ RV('J')
+#define RVN RV('N')
 #define RVG RV('G')
 
 const char *riscv_get_misa_ext_name(uint32_t bit);
@@ -169,6 +171,8 @@ struct CPUArchState {
     uint32_t elf_flags;
 #endif
 
+    dasics_table_t dasics_state;
+
 #ifndef CONFIG_USER_ONLY
     target_ulong priv;
     /* This contains QEMU specific information about the virt state. */
@@ -197,10 +201,18 @@ struct CPUArchState {
 
     uint64_t mie;
     uint64_t mideleg;
+    target_ulong sideleg;
 
     target_ulong satp;   /* since: priv-1.10.0 */
     target_ulong stval;
     target_ulong medeleg;
+    target_ulong sedeleg;
+
+    target_ulong utvec;
+    target_ulong uepc;
+    target_ulong ucause;
+    target_ulong utval;
+
 
     target_ulong stvec;
     target_ulong sepc;
@@ -210,6 +222,22 @@ struct CPUArchState {
     target_ulong mepc;
     target_ulong mcause;
     target_ulong mtval;  /* since: priv-1.10.0 */
+
+    // DASICS registers
+    // dasics_table_t dasics_state;
+    
+    // target_ulong  smbound_hi;
+    // target_ulong  smbound_lo;
+    // target_ulong  umbound_hi;
+    // target_ulong  umbound_lo;
+
+    // uint8_t       libcfg[MAX_DASICS_LIBBOUNDS];
+    // target_ulong  libbound_hi[MAX_DASICS_LIBBOUNDS];
+    // target_ulong  libbound_lo[MAX_DASICS_LIBBOUNDS];
+
+    // target_ulong    dmaincall;
+    // target_ulong    dretpc;
+    // target_ulong    dretpcfz;    
 
     /* Machine and Supervisor interrupt priorities */
     uint8_t miprio[64];
@@ -294,6 +322,8 @@ struct CPUArchState {
 
     target_ulong sscratch;
     target_ulong mscratch;
+    target_ulong uscratch;
+
 
     /* Sstc CSRs */
     uint64_t stimecmp;

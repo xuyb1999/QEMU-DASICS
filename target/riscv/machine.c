@@ -23,6 +23,7 @@
 #include "migration/cpu.h"
 #include "sysemu/cpu-timers.h"
 #include "debug.h"
+#include "dasics.h"
 
 static bool pmp_needed(void *opaque)
 {
@@ -349,6 +350,46 @@ static const VMStateDescription vmstate_jvt = {
     }
 };
 
+static bool dasics_needed(void *opaque)
+{
+    RISCVCPU *cpu = opaque;
+
+    return cpu->cfg.dasics;
+}
+
+static const VMStateDescription dasics_boundary = {
+    .name = "cpu/dasics_boundary",
+    .version_id = 1,
+    .minimum_version_id = 1,
+    .needed = dasics_needed,
+    .fields = (VMStateField[]) {
+        VMSTATE_UINTTL(hi, dasics_bound_t),
+        VMSTATE_UINTTL(lo, dasics_bound_t),
+        VMSTATE_END_OF_LIST()
+    }
+};
+
+static const VMStateDescription dasics_state = {
+    .name = "cpu/dasics",
+    .version_id = 1,
+    .minimum_version_id = 1,
+    .needed = dasics_needed,
+    .fields = (VMStateField[]) {
+        VMSTATE_UINT8(maincfg, dasics_table_t),
+        VMSTATE_STRUCT(smbound, dasics_table_t, 0, dasics_boundary, dasics_bound_t),
+        VMSTATE_STRUCT(umbound, dasics_table_t, 0, dasics_boundary, dasics_bound_t),
+        VMSTATE_UINT8_ARRAY(libcfg, dasics_table_t, MAX_DASICS_LIBBOUNDS),
+        VMSTATE_STRUCT_ARRAY(libbound, dasics_table_t, MAX_DASICS_LIBBOUNDS, 0, 
+                             dasics_boundary, dasics_bound_t),
+
+        VMSTATE_UINTTL(dmaincall, dasics_table_t),
+        VMSTATE_UINTTL(dretpc, dasics_table_t),
+        VMSTATE_UINTTL(dretpcfz, dasics_table_t),
+        VMSTATE_END_OF_LIST()
+    }
+};
+
+
 const VMStateDescription vmstate_riscv_cpu = {
     .name = "cpu",
     .version_id = 8,
@@ -380,9 +421,15 @@ const VMStateDescription vmstate_riscv_cpu = {
         VMSTATE_UINT64(env.miclaim, RISCVCPU),
         VMSTATE_UINT64(env.mie, RISCVCPU),
         VMSTATE_UINT64(env.mideleg, RISCVCPU),
+        VMSTATE_UINT64(env.sideleg, RISCVCPU),
         VMSTATE_UINTTL(env.satp, RISCVCPU),
         VMSTATE_UINTTL(env.stval, RISCVCPU),
         VMSTATE_UINTTL(env.medeleg, RISCVCPU),
+        VMSTATE_UINTTL(env.sedeleg, RISCVCPU),
+        VMSTATE_UINTTL(env.utvec, RISCVCPU),
+        VMSTATE_UINTTL(env.uepc, RISCVCPU),
+        VMSTATE_UINTTL(env.ucause, RISCVCPU),
+        VMSTATE_UINTTL(env.utval, RISCVCPU),
         VMSTATE_UINTTL(env.stvec, RISCVCPU),
         VMSTATE_UINTTL(env.sepc, RISCVCPU),
         VMSTATE_UINTTL(env.scause, RISCVCPU),
@@ -390,6 +437,7 @@ const VMStateDescription vmstate_riscv_cpu = {
         VMSTATE_UINTTL(env.mepc, RISCVCPU),
         VMSTATE_UINTTL(env.mcause, RISCVCPU),
         VMSTATE_UINTTL(env.mtval, RISCVCPU),
+        VMSTATE_STRUCT(env.dasics_state, RISCVCPU, 0, dasics_state, dasics_table_t),
         VMSTATE_UINTTL(env.miselect, RISCVCPU),
         VMSTATE_UINTTL(env.siselect, RISCVCPU),
         VMSTATE_UINTTL(env.scounteren, RISCVCPU),
