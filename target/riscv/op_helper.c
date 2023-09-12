@@ -608,6 +608,9 @@ void helper_dasics_redirect(CPURISCVState *env, target_ulong newpc,
     // Check whether this redirect instr is permitted
     int src_trusted = dasics_in_trusted_zone(env, env->pc);
     int dst_trusted = dasics_in_trusted_zone(env, newpc);
+
+    if (src_trusted && dst_trusted) return;
+
     int src_freezone = 0;
     int dst_freezone = 0;
     if (!src_trusted)
