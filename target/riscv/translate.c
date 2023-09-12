@@ -569,6 +569,15 @@ static void gen_jal(DisasContext *ctx, int rd, target_ulong imm)
     }
 
     gen_pc_plus_diff(succ_pc, ctx, ctx->cur_insn_len);
+    // DASICS check before update rd and pc
+#ifndef CONFIG_USER_ONLY
+
+    TCGv target_pc = tcg_temp_new();
+    gen_pc_plus_diff(target_pc, ctx, imm);
+    gen_helper_dasics_redirect(cpu_env, target_pc, succ_pc,
+                               tcg_constant_i64((uint64_t)0));
+
+#endif
     gen_set_gpr(ctx, rd, succ_pc);
 
     gen_goto_tb(ctx, 0, imm); /* must use this for safety */
@@ -1097,6 +1106,7 @@ static uint32_t opcode_at(DisasContextBase *dcbase, target_ulong pc)
 #include "insn_trans/trans_privileged.c.inc"
 #include "insn_trans/trans_svinval.c.inc"
 #include "insn_trans/trans_rvbf16.c.inc"
+#include "insn_trans/trans_dasics.c.inc"
 #include "decode-xthead.c.inc"
 #include "insn_trans/trans_xthead.c.inc"
 #include "insn_trans/trans_xventanacondops.c.inc"

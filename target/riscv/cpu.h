@@ -173,6 +173,7 @@ struct CPUArchState {
 
     dasics_table_t dasics_state;
 
+    
 #ifndef CONFIG_USER_ONLY
     target_ulong priv;
     /* This contains QEMU specific information about the virt state. */
@@ -223,27 +224,12 @@ struct CPUArchState {
     target_ulong mcause;
     target_ulong mtval;  /* since: priv-1.10.0 */
 
-    // DASICS registers
-    // dasics_table_t dasics_state;
-    
-    // target_ulong  smbound_hi;
-    // target_ulong  smbound_lo;
-    // target_ulong  umbound_hi;
-    // target_ulong  umbound_lo;
-
-    // uint8_t       libcfg[MAX_DASICS_LIBBOUNDS];
-    // target_ulong  libbound_hi[MAX_DASICS_LIBBOUNDS];
-    // target_ulong  libbound_lo[MAX_DASICS_LIBBOUNDS];
-
-    // target_ulong    dmaincall;
-    // target_ulong    dretpc;
-    // target_ulong    dretpcfz;    
-
     /* Machine and Supervisor interrupt priorities */
     uint8_t miprio[64];
     uint8_t siprio[64];
+    uint8_t uiprio[64];
 
-    /* AIA CSRs */
+    /* AIA CSRs */ 
     target_ulong miselect;
     target_ulong siselect;
 

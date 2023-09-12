@@ -226,6 +226,14 @@ static const char * const riscv_excp_names[] = {
     "guest_load_page_fault",
     "reserved",
     "guest_store_page_fault",
+    "dasics_user_fault_fetch",
+    "dasics_supervisor_fault_fetch",
+    "dasics_user_fault_load",
+    "dasics_supervisor_fault_load",
+    "dasics_user_fault_store",
+    "dasics_supervisor_fault_store",
+    "dasics_user_fault_ecall",
+    "dasics_supervisor_fault_ecall"
 };
 
 static const char * const riscv_intr_names[] = {
@@ -378,6 +386,7 @@ static void riscv_any_cpu_init(Object *obj)
 static void rv64_base_cpu_init(Object *obj)
 {
     CPURISCVState *env = &RISCV_CPU(obj)->env;
+    printf("[DEBUG]: The cpu 0x%lx\n", (uint64_t)((RISCV_CPU(obj))));
     /* We set this in the realise function */
     set_misa(env, MXL_RV64, 0);
     riscv_cpu_add_user_properties(obj);
@@ -884,6 +893,7 @@ static void riscv_cpu_reset_hold(Object *obj)
         iprio = riscv_cpu_default_priority(i);
         env->miprio[i] = (i == IRQ_M_EXT) ? 0 : iprio;
         env->siprio[i] = (i == IRQ_S_EXT) ? 0 : iprio;
+        env->uiprio[i] = (i == IRQ_U_EXT) ? 0 : iprio;
         env->hviprio[i] = 0;
     }
     i = 0;
