@@ -386,7 +386,6 @@ static void riscv_any_cpu_init(Object *obj)
 static void rv64_base_cpu_init(Object *obj)
 {
     CPURISCVState *env = &RISCV_CPU(obj)->env;
-    printf("[DEBUG]: The cpu 0x%lx\n", (uint64_t)((RISCV_CPU(obj))));
     /* We set this in the realise function */
     set_misa(env, MXL_RV64, 0);
     riscv_cpu_add_user_properties(obj);
