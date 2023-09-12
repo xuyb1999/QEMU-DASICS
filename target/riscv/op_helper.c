@@ -21,8 +21,8 @@
 #include "qemu/osdep.h"
 #include "cpu.h"
 #include "internals.h"
+#include "qemu/main-loop.h"
 #include "exec/exec-all.h"
-#include "exec/cpu_ldst.h"
 #include "exec/helper-proto.h"
 
 /* Exceptions processing helpers */
@@ -608,8 +608,12 @@ void helper_dasics_redirect(CPURISCVState *env, target_ulong newpc,
     // Check whether this redirect instr is permitted
     int src_trusted = dasics_in_trusted_zone(env, env->pc);
     int dst_trusted = dasics_in_trusted_zone(env, newpc);
-    int src_freezone = dasics_match_dlib(env, env->pc, LIBCFG_V | LIBCFG_X);
-    int dst_freezone = dasics_match_dlib(env, newpc, LIBCFG_V | LIBCFG_X);
+    int src_freezone = 0;
+    int dst_freezone = 0;
+    if (!src_trusted)
+        src_freezone = dasics_match_dlib(env, env->pc, LIBCFG_V | LIBCFG_X);
+    if (!dst_trusted)
+        dst_freezone = dasics_match_dlib(env, newpc, LIBCFG_V | LIBCFG_X);
 
     int allow_lib_to_main = !src_trusted && dst_trusted &&
         (newpc == env->dasics_state.dretpc || newpc == env->dasics_state.dmaincall);

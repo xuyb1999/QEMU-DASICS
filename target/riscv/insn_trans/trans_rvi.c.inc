@@ -175,18 +175,7 @@ static bool gen_branch(DisasContext *ctx, arg_b *a, TCGCond cond)
     target_ulong orig_pc_save = ctx->pc_save;
 
     
-    // DASICS
-#ifndef CONFIG_USER_ONLY
-    TCGv succ_pc = tcg_temp_new();
-    TCGv target_pc = tcg_temp_new();
-    gen_pc_plus_diff(succ_pc, ctx, ctx->cur_insn_len);
-    gen_pc_plus_diff(target_pc, ctx, a->imm);
 
-    gen_helper_dasics_redirect(cpu_env, target_pc,
-                               succ_pc,
-                               tcg_constant_i64((int64_t)0));
-
-#endif
 
     if (get_xl(ctx) == MXL_RV128) {
         TCGv src1h = get_gprh(ctx, a->rs1);
@@ -211,6 +200,18 @@ static bool gen_branch(DisasContext *ctx, arg_b *a, TCGCond cond)
         gen_pc_plus_diff(target_pc, ctx, a->imm);
         gen_exception_inst_addr_mis(ctx, target_pc);
     } else {
+            // DASICS
+        #ifndef CONFIG_USER_ONLY
+            TCGv succ_pc = tcg_temp_new();
+            TCGv target_pc = tcg_temp_new();
+            gen_pc_plus_diff(succ_pc, ctx, ctx->cur_insn_len);
+            gen_pc_plus_diff(target_pc, ctx, a->imm);
+
+            gen_helper_dasics_redirect(cpu_env, target_pc,
+                                    succ_pc,
+                                    tcg_constant_i64((int64_t)0));
+
+        #endif
         gen_goto_tb(ctx, 0, a->imm);
     }
     ctx->pc_save = -1;
