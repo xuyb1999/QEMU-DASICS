@@ -555,13 +555,7 @@ static RISCVException debug(CPURISCVState *env, int csrno)
 static RISCVException dasics(CPURISCVState *env, int csrno)
 {
     if (riscv_cpu_cfg(env)->dasics) { 
-        if ((csrno >= CSR_DUMCFG && csrno <= CSR_DUMBOUND1) || \
-            (csrno >= CSR_DSMCFG && csrno <= CSR_DSMBOUND1) || \
-            (csrno >= CSR_DLCFG0 && csrno <= CSR_DRETPCFZ)) {
-            return RISCV_EXCP_NONE;
-        }
-
-        return RISCV_EXCP_ILLEGAL_INST;
+        return RISCV_EXCP_NONE;
     }
 
     return RISCV_EXCP_ILLEGAL_INST;
@@ -4269,65 +4263,43 @@ static RISCVException write_dretpc(CPURISCVState *env, int csrno, target_ulong v
     return RISCV_EXCP_NONE;
 }
 
-static RISCVException read_dretpcfz(CPURISCVState *env, int csrno, target_ulong *val)
+static RISCVException read_dretpcactz(CPURISCVState *env, int csrno, target_ulong *val)
 {
-    *val = env->dasics_state.dretpcfz;
+    *val = env->dasics_state.dretpcactz;
     return RISCV_EXCP_NONE;
 }
 
-static RISCVException write_dretpcfz(CPURISCVState *env, int csrno, target_ulong val)
+static RISCVException write_dretpcactz(CPURISCVState *env, int csrno, target_ulong val)
 {
-    env->dasics_state.dretpcfz = val;
+    env->dasics_state.dretpcactz = val;
     return RISCV_EXCP_NONE;
 }
 
 static RISCVException read_dlcfg(CPURISCVState *env, int csrno, target_ulong *val)
 {
-    int idx = csrno - CSR_DLCFG0;
+    uint32_t step = 4;  // RV64
+    target_ulong cfgval = 0;
+    target_ulong _val = 0;
 
-    if (0 <= idx && idx < (MAX_DASICS_LIBBOUNDS >> 3)) {
-#if defined(TARGET_RISCV32)
-        uint32_t step = 4;  // RV32
-#else
-        uint32_t step = 8;  // RV64
-#endif
-        target_ulong cfgval = 0;
-        target_ulong _val = 0;
-
-        // Each libcfg contains 8 tiny configs
-        for (int i = 0; i < 8; ++i) {
-            cfgval = env->dasics_state.libcfg[(idx << 3) + i] & LIBCFG_MASK;
-            _val |= (cfgval << (i * step));
-        }
-        *val = _val;
-    } else {
-        qemu_log_mask(LOG_GUEST_ERROR,
-                      "Ignoring dlcfg read: Out of range! csrno = %d\n", csrno);
+    // Each libcfg contains 8 tiny configs
+    for (int i = 0; i < MAX_DASICS_LIBBOUNDS; ++i) {
+        cfgval = env->dasics_state.libcfg[i] & LIBCFG_MASK;
+        _val |= (cfgval << (i * step));
     }
+    *val = _val;
 
     return RISCV_EXCP_NONE;
 }
 
 static RISCVException write_dlcfg(CPURISCVState *env, int csrno, target_ulong val)
 {
-    int idx = csrno - CSR_DLCFG0;
+    uint32_t step = 4;  // RV64
+    uint8_t cfgval = 0;
 
-    if (0 <= idx && idx < (MAX_DASICS_LIBBOUNDS >> 3)) {
-#if defined(TARGET_RISCV32)
-        uint32_t step = 4;  // RV32
-#else
-        uint32_t step = 8;  // RV64
-#endif
-        uint8_t cfgval = 0;
-
-        // Each libcfg contains 8 tiny configs
-        for (int i = 0; i < 8; ++i) {
-            cfgval = (val >> (step * i)) & LIBCFG_MASK;
-            env->dasics_state.libcfg[(idx << 3) + i] = cfgval;
-        }
-    } else {
-        qemu_log_mask(LOG_GUEST_ERROR,
-                      "Ignoring dlcfg write: Out of range! csrno = %d\n", csrno);
+    // Each libcfg contains 8 tiny configs
+    for (int i = 0; i < MAX_DASICS_LIBBOUNDS; ++i) {
+        cfgval = (val >> (step * i)) & LIBCFG_MASK;
+        env->dasics_state.libcfg[i] = cfgval;
     }
 
     return RISCV_EXCP_NONE;
@@ -4338,8 +4310,8 @@ static RISCVException read_dlbound(CPURISCVState *env, int csrno, target_ulong *
     int idx = csrno - CSR_DLBOUND0;
 
     if (0 <= idx && idx < (MAX_DASICS_LIBBOUNDS << 1)) {
-        *val = !(idx & 0x1) ? env->dasics_state.libbound[idx >> 1].hi:
-                              env->dasics_state.libbound[idx >> 1].lo;
+        *val = !(idx & 0x1) ? env->dasics_state.libbound[idx >> 1].lo:
+                              env->dasics_state.libbound[idx >> 1].hi;
     } else {
         qemu_log_mask(LOG_GUEST_ERROR,
                 "Ignoring dlbound read: Out of range! csrno = %d\n", csrno);
@@ -4354,9 +4326,9 @@ static RISCVException write_dlbound(CPURISCVState *env, int csrno, target_ulong 
 
     if (0 <= idx && idx < (MAX_DASICS_LIBBOUNDS << 1)) {
         if (!(idx & 0x1)) {
-            env->dasics_state.libbound[idx >> 1].hi = val;
-        } else {
             env->dasics_state.libbound[idx >> 1].lo = val;
+        } else {
+            env->dasics_state.libbound[idx >> 1].hi = val;
         }
     } else {
         qemu_log_mask(LOG_GUEST_ERROR,
@@ -4366,14 +4338,81 @@ static RISCVException write_dlbound(CPURISCVState *env, int csrno, target_ulong 
     return RISCV_EXCP_NONE;
 }
 
+static RISCVException read_dljmpcfg(CPURISCVState *env, int csrno, target_ulong *val)
+{
+    uint32_t step = 16;
+    
+    target_ulong cfgval = 0;
+    target_ulong _val = 0;
+
+    // Each libjmpcfg contains 16 tiny configs
+    for (int i = 0; i < MAX_DASICS_LIBJMPBOUNDS; ++i) {
+        cfgval = env->dasics_state.libjmpcfg[i] & LIBCFG_MASK;
+        _val |= (cfgval << step);
+    }
+
+    *val = _val;
+
+    return RISCV_EXCP_NONE;
+}
+
+static RISCVException write_dljmpcfg(CPURISCVState *env, int csrno, target_ulong val)
+{
+    uint32_t step = 16;  // RV64
+
+    uint8_t cfgval = 0;
+
+    // Each libjmpcfg contains 16 tiny configs
+    for (int i = 0; i < MAX_DASICS_LIBJMPBOUNDS; ++i) {
+        cfgval = (val >> (step * i)) & LIBJMPCFG_MASK;
+        env->dasics_state.libjmpcfg[i] = cfgval;
+    }
+
+    return RISCV_EXCP_NONE;
+}
+
+
+static RISCVException read_dlibjmpbound(CPURISCVState *env, int csrno, target_ulong *val)
+{
+    int idx = csrno - CSR_DLIBJMPBOUND0;
+
+    if (0 <= idx && idx < (MAX_DASICS_LIBJMPBOUNDS << 1)) {
+        *val = !(idx & 0x1) ? env->dasics_state.libjmpbound[idx >> 1].lo:
+                              env->dasics_state.libjmpbound[idx >> 1].hi;
+    } else {
+        qemu_log_mask(LOG_GUEST_ERROR,
+                "Ignoring dlibjmplbound read: Out of range! csrno = %d\n", csrno);
+    }
+
+    return RISCV_EXCP_NONE;
+}
+
+static RISCVException write_dlibjmplbound(CPURISCVState *env, int csrno, target_ulong val)
+{
+    int idx = csrno - CSR_DLIBJMPBOUND0;
+
+    if (0 <= idx && idx < (MAX_DASICS_LIBJMPBOUNDS << 1)) {
+        if (!(idx & 0x1)) {
+            env->dasics_state.libjmpbound[idx >> 1].lo = val;
+        } else {
+            env->dasics_state.libjmpbound[idx >> 1].hi = val;
+        }
+    } else {
+        qemu_log_mask(LOG_GUEST_ERROR,
+                "Ignoring dlibjmplbound write: Out of range! csrno = %d\n", csrno);
+    }
+
+    return RISCV_EXCP_NONE;
+}
+
 static RISCVException read_dsmbound(CPURISCVState *env, int csrno, target_ulong *val)
 {
     switch(csrno) {
     case CSR_DSMBOUND0:
-        *val = env->dasics_state.smbound.hi;
+        *val = env->dasics_state.smbound.lo;
         break;
     case CSR_DSMBOUND1:
-        *val = env->dasics_state.smbound.lo;
+        *val = env->dasics_state.smbound.hi;
         break;
     default:
         qemu_log_mask(LOG_GUEST_ERROR, \
@@ -4388,10 +4427,10 @@ static RISCVException write_dsmbound(CPURISCVState *env, int csrno, target_ulong
 {
     switch(csrno) {
     case CSR_DSMBOUND0:
-        env->dasics_state.smbound.hi = val;
+        env->dasics_state.smbound.lo = val;
         break;
     case CSR_DSMBOUND1:
-        env->dasics_state.smbound.lo = val;
+        env->dasics_state.smbound.hi = val;
         break;
     default:
         qemu_log_mask(LOG_GUEST_ERROR, \
@@ -4406,10 +4445,10 @@ static RISCVException read_dumbound(CPURISCVState *env, int csrno, target_ulong 
 {
     switch(csrno) {
     case CSR_DUMBOUND0:
-        *val = env->dasics_state.umbound.hi;
+        *val = env->dasics_state.umbound.lo;
         break;
     case CSR_DUMBOUND1:
-        *val = env->dasics_state.umbound.lo;
+        *val = env->dasics_state.umbound.hi;
         break;
     default:
         qemu_log_mask(LOG_GUEST_ERROR, \
@@ -4424,10 +4463,10 @@ static RISCVException write_dumbound(CPURISCVState *env, int csrno, target_ulong
 {
     switch(csrno) {
     case CSR_DUMBOUND0:
-        env->dasics_state.umbound.hi = val;
+        env->dasics_state.umbound.lo = val;
         break;
     case CSR_DUMBOUND1:
-        env->dasics_state.umbound.lo = val;
+        env->dasics_state.umbound.hi = val;
         break;
     default:
         qemu_log_mask(LOG_GUEST_ERROR, \
@@ -4441,7 +4480,7 @@ static RISCVException write_dumbound(CPURISCVState *env, int csrno, target_ulong
 static RISCVException read_dsmcfg(CPURISCVState *env, int csrno, target_ulong *val)
 {
     *val = env->dasics_state.maincfg & SMCFG_MASK;
-    return RISCV_EXCP_NONE;
+    return RISCV_EXCP_NONE; 
 }
 
 static RISCVException write_dsmcfg(CPURISCVState *env, int csrno, target_ulong val)
@@ -4455,18 +4494,23 @@ static RISCVException write_dsmcfg(CPURISCVState *env, int csrno, target_ulong v
         write_dumbound(env, CSR_DUMBOUND1, 0);
     }
 
+    // Clear all dasics register
     if (val_scls || val_ucls) {
-        for (int i = 0; i < (MAX_DASICS_LIBBOUNDS >> 3); ++i) {
-            write_dlcfg(env, CSR_DLCFG0 + i, 0);
-        }
+        write_dlcfg(env, CSR_DLCFG, 0);
         for (int i = 0; i < MAX_DASICS_LIBBOUNDS; ++i) {
             write_dlbound(env, CSR_DLBOUND0 + (i << 1), 0);
             write_dlbound(env, CSR_DLBOUND1 + (i << 1), 0);
         }
 
+        write_dljmpcfg(env, CSR_DJMPCFG, 0);
+        for (int i = 0; i < MAX_DASICS_LIBJMPBOUNDS; ++i) {
+            write_dlbound(env, CSR_DLIBJMPBOUND0 + (i << 1), 0);
+            write_dlbound(env, CSR_DLIBJMPBOUND1 + (i << 1), 0);
+        }        
+
         write_dmaincall(env, CSR_DMAINCALL, 0);
         write_dretpc(env, CSR_DRETPC, 0);
-        write_dretpcfz(env, CSR_DRETPCFZ, 0);
+        write_dretpcactz(env, CSR_DRETPCACTZ, 0);
     }
 
     // Then update dsmcfg itself. CLS bit has already taken effect, thus set to 0
@@ -5198,8 +5242,7 @@ riscv_csr_operations csr_ops[CSR_TABLE_SIZE] = {
     [CSR_DUMBOUND0]      = {"dumbound0",    dasics,     read_dumbound,  write_dumbound  },
     [CSR_DUMBOUND1]      = {"dumbound1",    dasics,     read_dumbound,  write_dumbound  },
 
-    [CSR_DLCFG0]         = {"dlcfg0",       dasics,     read_dlcfg,     write_dlcfg     },
-    [CSR_DLCFG1]         = {"dlcfg1",       dasics,     read_dlcfg,     write_dlcfg     },
+    [CSR_DLCFG]          = {"dlcfg",       dasics,     read_dlcfg,     write_dlcfg     },
 
     [CSR_DLBOUND0]       = {"dlbound0",     dasics,     read_dlbound,   write_dlbound   },
     [CSR_DLBOUND1]       = {"dlbound1",     dasics,     read_dlbound,   write_dlbound   },
@@ -5234,8 +5277,20 @@ riscv_csr_operations csr_ops[CSR_TABLE_SIZE] = {
     [CSR_DLBOUND30]      = {"dlbound30",    dasics,     read_dlbound,   write_dlbound   },
     [CSR_DLBOUND31]      = {"dlbound31",    dasics,     read_dlbound,   write_dlbound   },
 
-    [CSR_DMAINCALL]      = {"dmaincall",    dasics,     read_dmaincall, write_dmaincall },
-    [CSR_DRETPC]         = {"dretpc",       dasics,     read_dretpc,    write_dretpc    },
-    [CSR_DRETPCFZ]       = {"dretpcfz",     dasics,     read_dretpcfz,  write_dretpcfz  }
+
+    [CSR_DLIBJMPBOUND0]  = {"dlibjmpbound0",    dasics,     read_dlibjmpbound,      write_dlibjmplbound   },
+    [CSR_DLIBJMPBOUND1]  = {"dlibjmpbound1",    dasics,     read_dlibjmpbound,      write_dlibjmplbound   },
+    [CSR_DLIBJMPBOUND2]  = {"dlibjmpbound2",    dasics,     read_dlibjmpbound,      write_dlibjmplbound   },
+    [CSR_DLIBJMPBOUND3]  = {"dlibjmpbound3",    dasics,     read_dlibjmpbound,      write_dlibjmplbound   },
+    [CSR_DLIBJMPBOUND4]  = {"dlibjmpbound4",    dasics,     read_dlibjmpbound,      write_dlibjmplbound   },
+    [CSR_DLIBJMPBOUND5]  = {"dlibjmpbound5",    dasics,     read_dlibjmpbound,      write_dlibjmplbound   },
+    [CSR_DLIBJMPBOUND6]  = {"dlibjmpbound6",    dasics,     read_dlibjmpbound,      write_dlibjmplbound   },
+    [CSR_DLIBJMPBOUND7]  = {"dlibjmpbound7",    dasics,     read_dlibjmpbound,      write_dlibjmplbound   },
+    
+    [CSR_DJMPCFG]        = {"djmpcfg",      dasics,     read_dljmpcfg,  write_dljmpcfg      },
+
+    [CSR_DMAINCALL]      = {"dmaincall",    dasics,     read_dmaincall, write_dmaincall     },
+    [CSR_DRETPC]         = {"dretpc",       dasics,     read_dretpc,    write_dretpc        },
+    [CSR_DRETPCACTZ]     = {"dretpcactz",   dasics,     read_dretpcactz,  write_dretpcactz  },
 
 };

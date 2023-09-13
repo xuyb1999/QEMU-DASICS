@@ -574,8 +574,10 @@ static void gen_jal(DisasContext *ctx, int rd, target_ulong imm)
 
     TCGv target_pc = tcg_temp_new();
     gen_pc_plus_diff(target_pc, ctx, imm);
-    gen_helper_dasics_redirect(cpu_env, target_pc, succ_pc,
-                               tcg_constant_i64((uint64_t)0));
+    
+    TCGv pc_now = tcg_temp_new();
+    gen_pc_plus_diff(pc_now, ctx, 0);
+    gen_helper_dasics_redirect(cpu_env, pc_now, target_pc, succ_pc);
 
 #endif
     gen_set_gpr(ctx, rd, succ_pc);

@@ -371,51 +371,62 @@
 
 /* DASICS CSRs */
 #define CSR_DSMCFG          0xbc0
-#define CSR_DSMBOUND0       0xbc1
-#define CSR_DSMBOUND1       0xbc2
+#define CSR_DSMBOUND0       0xbc2
+#define CSR_DSMBOUND1       0xbc3
 
-#define CSR_DUMCFG          0x5c0
-#define CSR_DUMBOUND0       0x5c1
-#define CSR_DUMBOUND1       0x5c2
+#define CSR_DUMCFG          0x9e0
+#define CSR_DUMBOUND0       0x9e2
+#define CSR_DUMBOUND1       0x9e3
 
-#define CSR_DLCFG0          0x881
-#define CSR_DLCFG1          0x882
-#define CSR_DLBOUND0        0x883
-#define CSR_DLBOUND1        0x884
-#define CSR_DLBOUND2        0x885
-#define CSR_DLBOUND3        0x886
-#define CSR_DLBOUND4        0x887
-#define CSR_DLBOUND5        0x888
-#define CSR_DLBOUND6        0x889
-#define CSR_DLBOUND7        0x88a
-#define CSR_DLBOUND8        0x88b
-#define CSR_DLBOUND9        0x88c
-#define CSR_DLBOUND10       0x88d
-#define CSR_DLBOUND11       0x88e
-#define CSR_DLBOUND12       0x88f
-#define CSR_DLBOUND13       0x890
-#define CSR_DLBOUND14       0x891
-#define CSR_DLBOUND15       0x892
-#define CSR_DLBOUND16       0x893
-#define CSR_DLBOUND17       0x894
-#define CSR_DLBOUND18       0x895
-#define CSR_DLBOUND19       0x896
-#define CSR_DLBOUND20       0x897
-#define CSR_DLBOUND21       0x898
-#define CSR_DLBOUND22       0x899
-#define CSR_DLBOUND23       0x89a
-#define CSR_DLBOUND24       0x89b
-#define CSR_DLBOUND25       0x89c
-#define CSR_DLBOUND26       0x89d
-#define CSR_DLBOUND27       0x89e
-#define CSR_DLBOUND28       0x89f
-#define CSR_DLBOUND29       0x8a0
-#define CSR_DLBOUND30       0x8a1
-#define CSR_DLBOUND31       0x8a2
+#define CSR_DLCFG           0x880
+#define CSR_DLBOUND0        0x890
+#define CSR_DLBOUND1        0x891
+#define CSR_DLBOUND2        0x892
+#define CSR_DLBOUND3        0x893
+#define CSR_DLBOUND4        0x894
+#define CSR_DLBOUND5        0x895
+#define CSR_DLBOUND6        0x896
+#define CSR_DLBOUND7        0x897
+#define CSR_DLBOUND8        0x898
+#define CSR_DLBOUND9        0x899
+#define CSR_DLBOUND10       0x89a
+#define CSR_DLBOUND11       0x89b
+#define CSR_DLBOUND12       0x89c
+#define CSR_DLBOUND13       0x89d
+#define CSR_DLBOUND14       0x89e
+#define CSR_DLBOUND15       0x89f
+#define CSR_DLBOUND16       0x8a0
+#define CSR_DLBOUND17       0x8a1
+#define CSR_DLBOUND18       0x8a2
+#define CSR_DLBOUND19       0x8a3
+#define CSR_DLBOUND20       0x8a4
+#define CSR_DLBOUND21       0x8a5
+#define CSR_DLBOUND22       0x8a6
+#define CSR_DLBOUND23       0x8a7
+#define CSR_DLBOUND24       0x8a8
+#define CSR_DLBOUND25       0x8a9
+#define CSR_DLBOUND26       0x8aa
+#define CSR_DLBOUND27       0x8ab
+#define CSR_DLBOUND28       0x8ac
+#define CSR_DLBOUND29       0x8ad
+#define CSR_DLBOUND30       0x8ae
+#define CSR_DLBOUND31       0x8af
 
-#define CSR_DMAINCALL       0x8a3
-#define CSR_DRETPC          0x8a4
-#define CSR_DRETPCFZ        0x8a5
+#define CSR_DLIBJMPBOUND0   0x8c0
+#define CSR_DLIBJMPBOUND1   0x8c1
+#define CSR_DLIBJMPBOUND2   0x8c2
+#define CSR_DLIBJMPBOUND3   0x8c3
+#define CSR_DLIBJMPBOUND4   0x8c4
+#define CSR_DLIBJMPBOUND5   0x8c5
+#define CSR_DLIBJMPBOUND6   0x8c6
+#define CSR_DLIBJMPBOUND7   0x8c7
+
+
+#define CSR_DJMPCFG         0x8c8
+#define CSR_DMAINCALL       0x8b0
+#define CSR_DRETPC          0x8b1
+#define CSR_DRETPCACTZ      0x8b2
+
 
 /* Performance Counters */
 #define CSR_MHPMCOUNTER3    0xb03

@@ -37,6 +37,27 @@ int dasics_in_trusted_zone(CPURISCVState *env, target_ulong pc)
     return 0;
 }
 
+int dasics_in_active_zone(CPURISCVState *env, target_ulong pc)
+{
+#ifndef CONFIG_USER_ONLY
+
+    int withinRange = 0;
+    for (int i = 0; i < MAX_DASICS_LIBJMPBOUNDS; ++i) {
+        uint8_t cfgval = env->dasics_state.libjmpcfg[i];
+        target_ulong boundhi = env->dasics_state.libjmpbound[i].hi;
+        target_ulong boundlo = env->dasics_state.libjmpbound[i].lo;
+        if ((cfgval & LIBJMPCFG_V) && boundlo <= pc && pc <= boundhi) {
+            withinRange = 1;
+            break;
+        }
+    }
+
+    return withinRange;    
+
+#endif
+    return 0;
+}
+
 int dasics_match_dlib(CPURISCVState *env, target_ulong addr, target_ulong cfg) {
     // Check whether the addr is within dlbounds which is marked as cfg
 #ifndef CONFIG_USER_ONLY

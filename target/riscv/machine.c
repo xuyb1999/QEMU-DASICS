@@ -381,10 +381,13 @@ static const VMStateDescription dasics_state = {
         VMSTATE_UINT8_ARRAY(libcfg, dasics_table_t, MAX_DASICS_LIBBOUNDS),
         VMSTATE_STRUCT_ARRAY(libbound, dasics_table_t, MAX_DASICS_LIBBOUNDS, 0, 
                              dasics_boundary, dasics_bound_t),
+        VMSTATE_UINT16_ARRAY(libjmpcfg, dasics_table_t, MAX_DASICS_LIBJMPBOUNDS),
+        VMSTATE_STRUCT_ARRAY(libjmpbound, dasics_table_t, MAX_DASICS_LIBJMPBOUNDS, 0, 
+                             dasics_boundary, dasics_bound_t),
 
         VMSTATE_UINTTL(dmaincall, dasics_table_t),
         VMSTATE_UINTTL(dretpc, dasics_table_t),
-        VMSTATE_UINTTL(dretpcfz, dasics_table_t),
+        VMSTATE_UINTTL(dretpcactz, dasics_table_t),
         VMSTATE_END_OF_LIST()
     }
 };

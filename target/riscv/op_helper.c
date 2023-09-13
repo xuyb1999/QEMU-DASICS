@@ -21,8 +21,8 @@
 #include "qemu/osdep.h"
 #include "cpu.h"
 #include "internals.h"
-#include "qemu/main-loop.h"
 #include "exec/exec-all.h"
+#include "exec/cpu_ldst.h"
 #include "exec/helper-proto.h"
 
 /* Exceptions processing helpers */
@@ -562,11 +562,11 @@ target_ulong helper_hyp_hlvx_wu(CPURISCVState *env, target_ulong addr)
 }
 
 /* DASICS helpers */
-void helper_dasics_ld_check(CPURISCVState *env, target_ulong addr)
+void helper_dasics_ld_check(CPURISCVState *env, target_ulong pc, target_ulong addr)
 {
     // Load from trusted code zone is permitted
     if (/*!riscv_feature(env, RISCV_FEATURE_DASICS) ||*/
-            dasics_in_trusted_zone(env, env->pc)) {
+            dasics_in_trusted_zone(env, pc)) {
         return;
     }
 
@@ -576,15 +576,15 @@ void helper_dasics_ld_check(CPURISCVState *env, target_ulong addr)
                                 RISCV_EXCP_DASICS_U_LOAD_ACCESS_FAULT:
                                 RISCV_EXCP_DASICS_S_LOAD_ACCESS_FAULT;
         env->badaddr = addr;
-        riscv_raise_exception(env, exception, GETPC());
+        riscv_raise_exception(env, exception, pc);
     }
 }
 
-void helper_dasics_st_check(CPURISCVState *env, target_ulong addr)
+void helper_dasics_st_check(CPURISCVState *env, target_ulong pc, target_ulong addr)
 {
     // Store from trusted code zone is permitted
     if (/*!riscv_feature(env, RISCV_FEATURE_DASICS) || */
-            dasics_in_trusted_zone(env, env->pc)) {
+            dasics_in_trusted_zone(env, pc)) {
         return;
     }
 
@@ -594,37 +594,54 @@ void helper_dasics_st_check(CPURISCVState *env, target_ulong addr)
                                 RISCV_EXCP_DASICS_U_STORE_ACCESS_FAULT:
                                 RISCV_EXCP_DASICS_S_STORE_ACCESS_FAULT;
         env->badaddr = addr;
-        riscv_raise_exception(env, exception, GETPC());
+        riscv_raise_exception(env, exception, pc);
     }
 }
 
-void helper_dasics_redirect(CPURISCVState *env, target_ulong newpc,
-    target_ulong nextpc, uint64_t is_dasicsret)
+void helper_dasics_call(CPURISCVState *env, target_ulong pc, target_ulong newpc, target_ulong nextpc)
 {
-    // if (!riscv_feature(env, RISCV_FEATURE_DASICS)) {
-    //     return;
-    // }
+    int src_trusted = dasics_in_trusted_zone(env, pc);
+
+    // Only trusted area can call dasicscall
+    if (!src_trusted) {
+        uint32_t exception = (env->priv == PRV_U) ?
+                                RISCV_EXCP_DASICS_U_INST_ACCESS_FAULT:
+                                RISCV_EXCP_DASICS_S_INST_ACCESS_FAULT;
+        env->badaddr = newpc;
+        riscv_raise_exception(env, exception, pc);        
+    }
+
+    // Save nextpc
+    env->dasics_state.dretpc = nextpc;
+
+}
+
+void helper_dasics_redirect(CPURISCVState *env, target_ulong pc, target_ulong newpc, target_ulong nextpc)
+{
 
     // Check whether this redirect instr is permitted
-    int src_trusted = dasics_in_trusted_zone(env, env->pc);
+    int src_trusted = dasics_in_trusted_zone(env, pc);
+    // Trusted area can jump to anywhere and don't care target
+    if (src_trusted) return;
+
     int dst_trusted = dasics_in_trusted_zone(env, newpc);
 
-    if (src_trusted && dst_trusted) return;
+    
 
-    int src_freezone = 0;
-    int dst_freezone = 0;
+    int src_activezone = 0;
+    int dst_activezone = 0;
     if (!src_trusted)
-        src_freezone = dasics_match_dlib(env, env->pc, LIBCFG_V | LIBCFG_X);
+        src_activezone = dasics_in_active_zone(env, pc);
     if (!dst_trusted)
-        dst_freezone = dasics_match_dlib(env, newpc, LIBCFG_V | LIBCFG_X);
+        dst_activezone = dasics_in_active_zone(env, newpc);
 
     int allow_lib_to_main = !src_trusted && dst_trusted &&
         (newpc == env->dasics_state.dretpc || newpc == env->dasics_state.dmaincall);
-    int allow_freezone_to_lib = src_freezone && !dst_trusted &&
-        !dst_freezone && (newpc == env->dasics_state.dretpcfz);
+    int allow_activezone_to_lib = src_activezone && !dst_trusted &&
+        !dst_activezone && (newpc == env->dasics_state.dretpcactz);
 
     int allow_brjp = src_trusted  || allow_lib_to_main ||
-                     dst_freezone || allow_freezone_to_lib;
+                     dst_activezone || allow_activezone_to_lib;
 
     if (!allow_brjp) {
         uint32_t exception = (env->priv == PRV_U) ?
@@ -634,10 +651,14 @@ void helper_dasics_redirect(CPURISCVState *env, target_ulong newpc,
         riscv_raise_exception(env, exception, GETPC());
     }
 
-    // Set dretpc when redirect from trusted zone to untrusted, if not dasicsret
-    if (src_trusted && !dst_trusted && !is_dasicsret) {
-        env->dasics_state.dretpc = nextpc;
+
+    // Set dretpcfz when redirect from active zone to untrusted, if not dasicsret
+    if ( !src_trusted && \
+         !src_activezone && \
+         dst_activezone) {
+        env->dasics_state.dretpcactz = nextpc;
     }
+
 }
 
 #endif /* !CONFIG_USER_ONLY */

@@ -75,9 +75,10 @@ static bool trans_jalr(DisasContext *ctx, arg_jalr *a)
 
     // DASICS check before update rd and pc
 #ifndef CONFIG_USER_ONLY
+    TCGv pc_now = tcg_temp_new();
+    gen_pc_plus_diff(pc_now, ctx, 0);
 
-    gen_helper_dasics_redirect(cpu_env, target_pc, succ_pc,
-                               tcg_constant_i64((uint64_t)0));
+    gen_helper_dasics_redirect(cpu_env, pc_now, target_pc, succ_pc);
 
 #endif
 
@@ -174,8 +175,6 @@ static bool gen_branch(DisasContext *ctx, arg_b *a, TCGCond cond)
     TCGv src2 = get_gpr(ctx, a->rs2, EXT_SIGN);
     target_ulong orig_pc_save = ctx->pc_save;
 
-    
-
 
     if (get_xl(ctx) == MXL_RV128) {
         TCGv src1h = get_gprh(ctx, a->rs1);
@@ -204,12 +203,13 @@ static bool gen_branch(DisasContext *ctx, arg_b *a, TCGCond cond)
         #ifndef CONFIG_USER_ONLY
             TCGv succ_pc = tcg_temp_new();
             TCGv target_pc = tcg_temp_new();
+            TCGv pc_now = tcg_temp_new();
             gen_pc_plus_diff(succ_pc, ctx, ctx->cur_insn_len);
             gen_pc_plus_diff(target_pc, ctx, a->imm);
 
-            gen_helper_dasics_redirect(cpu_env, target_pc,
-                                    succ_pc,
-                                    tcg_constant_i64((int64_t)0));
+            gen_pc_plus_diff(pc_now, ctx, 0);
+
+            gen_helper_dasics_redirect(cpu_env, pc_now, target_pc, succ_pc);
 
         #endif
         gen_goto_tb(ctx, 0, a->imm);
@@ -256,7 +256,9 @@ static bool gen_load_tl(DisasContext *ctx, arg_lb *a, MemOp memop)
     TCGv addr = get_address(ctx, a->rs1, a->imm);
 
 #ifndef CONFIG_USER_ONLY
-    gen_helper_dasics_ld_check(cpu_env, addr);
+    TCGv pc_now = tcg_temp_new();
+    gen_pc_plus_diff(pc_now, ctx, 0);
+    gen_helper_dasics_ld_check(cpu_env, pc_now, addr);
 #endif
 
     tcg_gen_qemu_ld_tl(dest, addr, ctx->mem_idx, memop);
@@ -357,7 +359,10 @@ static bool gen_store_tl(DisasContext *ctx, arg_sb *a, MemOp memop)
     TCGv data = get_gpr(ctx, a->rs2, EXT_NONE);
 
 #ifndef CONFIG_USER_ONLY
-    gen_helper_dasics_st_check(cpu_env, addr);
+    TCGv pc_now = tcg_temp_new();
+    gen_pc_plus_diff(pc_now, ctx, 0);
+    
+    gen_helper_dasics_st_check(cpu_env, pc_now, addr);
 #endif
 
     tcg_gen_qemu_st_tl(data, addr, ctx->mem_idx, memop);
