@@ -4347,8 +4347,8 @@ static RISCVException read_dljmpcfg(CPURISCVState *env, int csrno, target_ulong 
 
     // Each libjmpcfg contains 16 tiny configs
     for (int i = 0; i < MAX_DASICS_LIBJMPBOUNDS; ++i) {
-        cfgval = env->dasics_state.libjmpcfg[i] & LIBCFG_MASK;
-        _val |= (cfgval << step);
+        cfgval = env->dasics_state.libjmpcfg[i] & LIBJMPCFG_MASK;
+        _val |= (cfgval << (i * step));
     }
 
     *val = _val;
