@@ -21,8 +21,8 @@
 #include "qemu/osdep.h"
 #include "cpu.h"
 #include "internals.h"
+#include "qemu/main-loop.h"
 #include "exec/exec-all.h"
-#include "exec/cpu_ldst.h"
 #include "exec/helper-proto.h"
 
 /* Exceptions processing helpers */
@@ -576,7 +576,7 @@ void helper_dasics_ld_check(CPURISCVState *env, target_ulong pc, target_ulong ad
                                 RISCV_EXCP_DASICS_U_LOAD_ACCESS_FAULT:
                                 RISCV_EXCP_DASICS_S_LOAD_ACCESS_FAULT;
         env->badaddr = addr;
-        riscv_raise_exception(env, exception, pc);
+        riscv_raise_exception(env, exception, GETPC());
     }
 }
 
@@ -594,13 +594,13 @@ void helper_dasics_st_check(CPURISCVState *env, target_ulong pc, target_ulong ad
                                 RISCV_EXCP_DASICS_U_STORE_ACCESS_FAULT:
                                 RISCV_EXCP_DASICS_S_STORE_ACCESS_FAULT;
         env->badaddr = addr;
-        riscv_raise_exception(env, exception, pc);
+        riscv_raise_exception(env, exception, GETPC());
     }
 }
 
 void helper_dasics_call(CPURISCVState *env, target_ulong pc, target_ulong newpc, target_ulong nextpc)
 {
-    int src_trusted = dasics_in_trusted_zone(env, pc);
+    int src_trusted = dasics_in_trusted_zone(env, GETPC());
 
     // Only trusted area can call dasicscall
     if (!src_trusted) {
@@ -608,7 +608,7 @@ void helper_dasics_call(CPURISCVState *env, target_ulong pc, target_ulong newpc,
                                 RISCV_EXCP_DASICS_U_INST_ACCESS_FAULT:
                                 RISCV_EXCP_DASICS_S_INST_ACCESS_FAULT;
         env->badaddr = newpc;
-        riscv_raise_exception(env, exception, pc);        
+        riscv_raise_exception(env, exception, GETPC());        
     }
 
     // Save nextpc
