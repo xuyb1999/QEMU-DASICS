@@ -600,7 +600,7 @@ void helper_dasics_st_check(CPURISCVState *env, target_ulong pc, target_ulong ad
 
 void helper_dasics_call(CPURISCVState *env, target_ulong pc, target_ulong newpc, target_ulong nextpc)
 {
-    int src_trusted = dasics_in_trusted_zone(env, GETPC());
+    int src_trusted = dasics_in_trusted_zone(env, pc);
 
     // Only trusted area can call dasicscall
     if (!src_trusted) {
