@@ -202,7 +202,7 @@ struct CPUArchState {
 
     uint64_t mie;
     uint64_t mideleg;
-    target_ulong sideleg;
+    uint64_t sideleg;
 
     target_ulong satp;   /* since: priv-1.10.0 */
     target_ulong stval;
